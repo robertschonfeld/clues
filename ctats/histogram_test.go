@@ -128,18 +128,13 @@ func TestBoundaries(t *testing.T) {
 			want: []float64{1, 100},
 		},
 		{
-			name: "scaling factor 0 treated as 1 (no-op)",
+			name: "scaling factor 0 is invalid - defaults to 1",
 			got:  MakeExponentialHistogramBoundaries(10, 1000, 5, 0),
 			want: []float64{10, 32, 100, 316, 1000},
 		},
 		{
-			name: "negative scaling factor treated as 1 (no-op)",
+			name: "negative scaling factor is invalid - defaults to 1",
 			got:  MakeExponentialHistogramBoundaries(10, 1000, 5, -3),
-			want: []float64{10, 32, 100, 316, 1000},
-		},
-		{
-			name: "5 buckets, uniform log-spacing",
-			got:  MakeExponentialHistogramBoundaries(10, 1000, 5, 1),
 			want: []float64{10, 32, 100, 316, 1000},
 		},
 		{
@@ -151,6 +146,16 @@ func TestBoundaries(t *testing.T) {
 			name: "20 buckets, uniform log-spacing",
 			got:  MakeExponentialHistogramBoundaries(1, 60_000, 20, 1),
 			want: []float64{1, 2, 3, 6, 10, 18, 32, 58, 103, 183, 327, 584, 1042, 1859, 3317, 5919, 10561, 18845, 33626, 60000},
+		},
+		{
+			name: "scaling factor 0.5: finer resolution at high end, min and max preserved",
+			got:  MakeExponentialHistogramBoundaries(10, 1000, 5, 0.5),
+			want: []float64{10, 100, 260, 540, 1000},
+		},
+		{
+			name: "5 buckets, uniform log-spacing",
+			got:  MakeExponentialHistogramBoundaries(10, 1000, 5, 1),
+			want: []float64{10, 32, 100, 316, 1000},
 		},
 		{
 			name: "scaling factor 2: finer resolution at low end, min and max preserved",

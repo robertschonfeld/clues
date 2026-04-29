@@ -141,11 +141,10 @@ ignored.
 Use `MakeExponentialHistogramBoundaries` to generate logarithmically-spaced
 buckets. `min` and `max` determines the supported range of your metric.
 
-The optional `scalingFactor` controls how densely buckets are packed toward
-the low end of the range. At 1 (the default for any value ≤ 1) you get uniform
-log-spacing. Values greater than 1 warp the distribution so more bucket edges
-cluster near `min`, giving finer resolution where data is most likely to
-concentrate.
+The optional `scalingFactor` warps the bucket distribution. At 1 you get
+uniform log-spacing. Above 1, more edges cluster near `min` (useful for
+latency, where data tends to clump at the low end). Between 0 and 1, more
+edges cluster near `max`. Values ≤ 0 default to 1.
 
 ```go
 // example: measuring http server latencies in ms up to 60s

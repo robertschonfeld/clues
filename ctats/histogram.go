@@ -17,23 +17,24 @@ import (
 // and how boundaries map to OTel buckets, see the OTel metrics SDK spec:
 // https://opentelemetry.io/docs/specs/otel/metrics/sdk/#explicit-bucket-histogram-aggregation
 //
-// scalingFactor controls how densely buckets are packed toward the low end of the
-// range. At 1 (the default for any value ≤ 1), positions are uniformly log-spaced —
-// constant growth ratio between consecutive buckets. Values greater than 1 warp the
-// position distribution so that more bucket edges cluster near min.
+// scalingFactor warps the position distribution between min and max. At 1,
+// positions are uniformly log-spaced — constant growth ratio. Values above 1
+// pack more buckets toward min (useful when data clusters at the low end).
+// Values between 0 and 1 pack more buckets toward max. Values ≤ 0 are invalid
+// and default to 1.
 //
 // Example:
 //
 //	MakeExponentialHistogramBoundaries(1, 60_000, 15, 1)
 //	// → [1 2 5 11 23 51 112 245 537 1179 2588 5679 12461 27344 60000]
 //
-//	MakeExponentialHistogramBoundaries(10, 1000, 5, 1)
-//	// → [10 32 100 316 1000]   (uniform log-spacing)
+//	MakeExponentialHistogramBoundaries(10, 1000, 5, 0.5)
+//	// → [10 100 260 540 1000]  (denser at high end)
 //
 //	MakeExponentialHistogramBoundaries(10, 1000, 5, 2)
-//	// → [10 13 32 133 1000]    (denser at low end, same range)
+//	// → [10 13 32 133 1000]    (denser at low end)
 func MakeExponentialHistogramBoundaries(min, max float64, count int, scalingFactor float64) []float64 {
-	if scalingFactor <= 1 {
+	if scalingFactor <= 0 {
 		scalingFactor = 1
 	}
 
