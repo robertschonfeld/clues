@@ -13,15 +13,15 @@ import (
 )
 
 // MakeExponentialHistogramBoundaries returns count boundaries spaced logarithmically
-// between lo and hi (both inclusive). For background on explicit bucket histograms
+// between low and high (both inclusive). For background on explicit bucket histograms
 // and how boundaries map to OTel buckets, see the OTel metrics SDK spec
 // (navigate to the "Explicit Bucket Histogram Aggregation" section):
 // https://opentelemetry.io/docs/specs/otel/metrics/sdk/
 //
-// scalingFactor warps the position distribution between lo and hi. At 1,
+// scalingFactor warps the position distribution between low and high. At 1,
 // positions are uniformly log-spaced — constant growth ratio. Values above 1
-// pack more buckets toward lo (useful when data clusters at the low end).
-// Values between 0 and 1 pack more buckets toward hi. Values ≤ 0 are invalid
+// pack more buckets toward low (useful when data clusters at the low end).
+// Values between 0 and 1 pack more buckets toward high. Values ≤ 0 are invalid
 // and default to 1.
 //
 // Example:
@@ -38,7 +38,7 @@ import (
 //	MakeExponentialHistogramBoundaries(10, 1000, 5, 2)
 //	// → [10 13 32 133 1000]    (denser at low end)
 func MakeExponentialHistogramBoundaries(
-	lo, hi float64,
+	low, high float64,
 	count int,
 	scalingFactor float64,
 ) []float64 {
@@ -47,18 +47,18 @@ func MakeExponentialHistogramBoundaries(
 	}
 
 	if count < 2 {
-		return []float64{lo, hi}
+		return []float64{low, high}
 	}
 
 	b := make([]float64, count)
 
 	for i := range b {
 		t := math.Pow(float64(i)/float64(count-1), scalingFactor)
-		b[i] = math.Round(lo * math.Pow(hi/lo, t))
+		b[i] = math.Round(low * math.Pow(high/low, t))
 	}
 
-	b[0] = lo       // guarantee exact floor, no rounding drift
-	b[count-1] = hi // guarantee exact ceiling, no rounding drift
+	b[0] = low        // guarantee exact floor, no rounding drift
+	b[count-1] = high // guarantee exact ceiling, no rounding drift
 
 	return b
 }

@@ -139,12 +139,12 @@ ignored.
 ### Picking your boundaries
 
 Use `MakeExponentialHistogramBoundaries` to generate logarithmically-spaced
-buckets. `lo` and `hi` determine the supported range of your metric.
+buckets. `low` and `high` determine the supported range of your metric.
 
 The optional `scalingFactor` warps the bucket distribution. At 1 you get
-uniform log-spacing. Above 1, more edges cluster near `lo` (useful for
+uniform log-spacing. Above 1, more edges cluster near `low` (useful for
 latency, where data tends to clump at the low end). Between 0 and 1, more
-edges cluster near `hi`. Values ≤ 0 default to 1.
+edges cluster near `high`. Values ≤ 0 default to 1.
 
 ```go
 // example: measuring http server latencies in ms up to 60s
