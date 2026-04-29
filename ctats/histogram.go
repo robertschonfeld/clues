@@ -13,14 +13,15 @@ import (
 )
 
 // MakeExponentialHistogramBoundaries returns count boundaries spaced logarithmically
-// between min and max (both inclusive). For background on explicit bucket histograms
-// and how boundaries map to OTel buckets, see the OTel metrics SDK spec:
-// https://opentelemetry.io/docs/specs/otel/metrics/sdk/#explicit-bucket-histogram-aggregation
+// between lo and hi (both inclusive). For background on explicit bucket histograms
+// and how boundaries map to OTel buckets, see the OTel metrics SDK spec
+// (navigate to the "Explicit Bucket Histogram Aggregation" section):
+// https://opentelemetry.io/docs/specs/otel/metrics/sdk/
 //
-// scalingFactor warps the position distribution between min and max. At 1,
+// scalingFactor warps the position distribution between lo and hi. At 1,
 // positions are uniformly log-spaced — constant growth ratio. Values above 1
-// pack more buckets toward min (useful when data clusters at the low end).
-// Values between 0 and 1 pack more buckets toward max. Values ≤ 0 are invalid
+// pack more buckets toward lo (useful when data clusters at the low end).
+// Values between 0 and 1 pack more buckets toward hi. Values ≤ 0 are invalid
 // and default to 1.
 //
 // Example:
@@ -31,26 +32,33 @@ import (
 //	MakeExponentialHistogramBoundaries(10, 1000, 5, 0.5)
 //	// → [10 100 260 540 1000]  (denser at high end)
 //
+//	MakeExponentialHistogramBoundaries(10, 1000, 5, 1)
+//	// → [10 32 100 316 1000]   (uniform log-spacing)
+//
 //	MakeExponentialHistogramBoundaries(10, 1000, 5, 2)
 //	// → [10 13 32 133 1000]    (denser at low end)
-func MakeExponentialHistogramBoundaries(min, max float64, count int, scalingFactor float64) []float64 {
+func MakeExponentialHistogramBoundaries(
+	lo, hi float64,
+	count int,
+	scalingFactor float64,
+) []float64 {
 	if scalingFactor <= 0 {
 		scalingFactor = 1
 	}
 
 	if count < 2 {
-		return []float64{min, max}
+		return []float64{lo, hi}
 	}
 
 	b := make([]float64, count)
 
 	for i := range b {
 		t := math.Pow(float64(i)/float64(count-1), scalingFactor)
-		b[i] = math.Round(min * math.Pow(max/min, t))
+		b[i] = math.Round(lo * math.Pow(hi/lo, t))
 	}
 
-	b[0] = min       // guarantee exact floor, no rounding drift
-	b[count-1] = max // guarantee exact ceiling, no rounding drift
+	b[0] = lo       // guarantee exact floor, no rounding drift
+	b[count-1] = hi // guarantee exact ceiling, no rounding drift
 
 	return b
 }
@@ -59,7 +67,9 @@ type histogramCfg struct {
 	boundaries []float64
 }
 
-func (c histogramCfg) appendOpts(opts []metric.Float64HistogramOption) []metric.Float64HistogramOption {
+func (c histogramCfg) appendOpts(
+	opts ...metric.Float64HistogramOption,
+) []metric.Float64HistogramOption {
 	if len(c.boundaries) > 0 {
 		opts = append(opts, metric.WithExplicitBucketBoundaries(c.boundaries...))
 	}
@@ -104,7 +114,7 @@ func getOrCreateHistogram(
 		return nil, cluerr.Stack(errNoNodeInCtx)
 	}
 
-	opts := cfg.appendOpts(nil)
+	opts := cfg.appendOpts()
 
 	// register the histogram
 	hist, err := nc.OTELMeter().Float64Histogram(id, opts...)
@@ -170,7 +180,7 @@ func RegisterHistogram(
 		metricHistogramOpts = append(metricHistogramOpts, metric.WithUnit(unit))
 	}
 
-	metricHistogramOpts = cfg.appendOpts(metricHistogramOpts)
+	metricHistogramOpts = cfg.appendOpts(metricHistogramOpts...)
 
 	hist, err := nc.OTELMeter().Float64Histogram(id, metricHistogramOpts...)
 	if err != nil {

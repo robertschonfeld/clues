@@ -140,12 +140,18 @@ func TestBoundaries(t *testing.T) {
 		{
 			name: "15 buckets, uniform log-spacing",
 			got:  MakeExponentialHistogramBoundaries(1, 60_000, 15, 1),
-			want: []float64{1, 2, 5, 11, 23, 51, 112, 245, 537, 1179, 2588, 5679, 12461, 27344, 60000},
+			want: []float64{
+				1, 2, 5, 11, 23, 51, 112, 245,
+				537, 1179, 2588, 5679, 12461, 27344, 60000,
+			},
 		},
 		{
 			name: "20 buckets, uniform log-spacing",
 			got:  MakeExponentialHistogramBoundaries(1, 60_000, 20, 1),
-			want: []float64{1, 2, 3, 6, 10, 18, 32, 58, 103, 183, 327, 584, 1042, 1859, 3317, 5919, 10561, 18845, 33626, 60000},
+			want: []float64{
+				1, 2, 3, 6, 10, 18, 32, 58, 103, 183,
+				327, 584, 1042, 1859, 3317, 5919, 10561, 18845, 33626, 60000,
+			},
 		},
 		{
 			name: "scaling factor 0.5: finer resolution at high end, min and max preserved",
@@ -241,6 +247,7 @@ func TestHistogramFirstBoundariesWin(t *testing.T) {
 			setup: func(t *testing.T, ctx context.Context) context.Context {
 				ctx, err := RegisterHistogram(ctx, "first.wins", "", "", WithBoundaries(first...))
 				require.NoError(t, err)
+
 				return ctx
 			},
 		},
@@ -255,7 +262,10 @@ func TestHistogramFirstBoundariesWin(t *testing.T) {
 			Histogram[int64]("first.wins", WithBoundaries(second...)).Record(ctx, 50)
 
 			dp := collectHistogram(t, reader, "first.wins")
-			assert.Equal(t, float64(100), dp.Bounds[len(dp.Bounds)-1], "second boundaries ignored, first wins")
+			assert.Equal(
+				t, float64(100), dp.Bounds[len(dp.Bounds)-1],
+				"second boundaries ignored, first wins",
+			)
 		})
 	}
 }
@@ -270,6 +280,7 @@ func ctatsCtx(t *testing.T, reader *sdkMetric.ManualReader) context.Context {
 	t.Helper()
 
 	mp := sdkMetric.NewMeterProvider(sdkMetric.WithReader(reader))
+
 	t.Cleanup(func() { _ = mp.Shutdown(context.Background()) })
 
 	otelClient := &node.OTELClient{
@@ -304,6 +315,7 @@ func collectHistogram(
 				h, ok := m.Data.(metricdata.Histogram[float64])
 				require.True(t, ok, "metric %q is not a Histogram[float64]", name)
 				require.NotEmpty(t, h.DataPoints)
+
 				return h.DataPoints[0]
 			}
 		}
@@ -327,11 +339,17 @@ func TestRecordWithDefaultLatencyBoundaries(t *testing.T) {
 
 	dp := collectHistogram(t, reader, "op.latency")
 
-	assert.Equal(t, float64(60_000), dp.Bounds[len(dp.Bounds)-1], "last boundary is 60,000 ms")
+	assert.Equal(
+		t, float64(60_000), dp.Bounds[len(dp.Bounds)-1],
+		"last boundary is 60,000 ms",
+	)
 	assert.Equal(t, uint64(0), dp.BucketCounts[len(dp.BucketCounts)-1], "no overflow")
 
 	// 15,000 ms sits between bounds[12]=12,461 and bounds[13]=27,344
-	assert.Equal(t, uint64(1), dp.BucketCounts[13], "15,000 ms lands in bucket 13 (12461–27344 ms)")
+	assert.Equal(
+		t, uint64(1), dp.BucketCounts[13],
+		"15,000 ms lands in bucket 13 (12461–27344 ms)",
+	)
 }
 
 // TestRecordDefaultOTelBoundariesOverflow shows that without WithBoundaries,
@@ -344,6 +362,12 @@ func TestRecordDefaultOTelBoundariesOverflow(t *testing.T) {
 
 	dp := collectHistogram(t, reader, "op.latency.default")
 
-	assert.Equal(t, float64(10_000), dp.Bounds[len(dp.Bounds)-1], "default ceiling is 10,000 ms")
-	assert.Equal(t, uint64(1), dp.BucketCounts[len(dp.BucketCounts)-1], "15,000 ms overflows to +Inf")
+	assert.Equal(
+		t, float64(10_000), dp.Bounds[len(dp.Bounds)-1],
+		"default ceiling is 10,000 ms",
+	)
+	assert.Equal(
+		t, uint64(1), dp.BucketCounts[len(dp.BucketCounts)-1],
+		"15,000 ms overflows to +Inf",
+	)
 }
